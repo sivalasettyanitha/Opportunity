@@ -1,0 +1,14 @@
+[Unit]
+Description=Opportunity360 Backend Service
+After=syslog.target network.target mysql.service
+
+[Service]
+User=ubuntu
+WorkingDirectory=/var/www/opportunity/opportunity360-backend
+ExecStart=/usr/bin/java -jar /var/www/opportunity/opportunity360-backend/target/opportunity360-backend-0.0.1-SNAPSHOT.jar
+SuccessExitStatus=143
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
