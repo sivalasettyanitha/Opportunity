@@ -45,11 +45,21 @@ public class UserController {
             @Valid @RequestBody RegisterRequest request) {
 
         try {
-            emailVerificationService.startVerification(
+            String fallbackOtp = emailVerificationService.startVerification(
                 request.getName(),
                 request.getEmail(),
                 request.getPassword()
             );
+
+            if (fallbackOtp != null) {
+                return ResponseEntity.status(HttpStatus.ACCEPTED).body(
+                    Map.of(
+                        "message",
+                        "Email server offline. Your verification code is: " + fallbackOtp,
+                        "otp", fallbackOtp
+                    )
+                );
+            }
 
             return ResponseEntity.status(HttpStatus.ACCEPTED).body(
                 Map.of(
@@ -61,6 +71,10 @@ public class UserController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(
                 Map.of("message", e.getMessage())
+            );
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                Map.of("message", "Unable to start registration: " + e.getMessage())
             );
         }
     }
@@ -105,7 +119,17 @@ public class UserController {
             @Valid @RequestBody ResendOtpRequest request) {
 
         try {
-            emailVerificationService.resendOtp(request.getEmail());
+            String fallbackOtp = emailVerificationService.resendOtp(request.getEmail());
+
+            if (fallbackOtp != null) {
+                return ResponseEntity.ok(
+                    Map.of(
+                        "message",
+                        "Email server offline. Your new OTP is: " + fallbackOtp,
+                        "otp", fallbackOtp
+                    )
+                );
+            }
 
             return ResponseEntity.ok(
                 Map.of(
@@ -117,6 +141,10 @@ public class UserController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(
                 Map.of("message", e.getMessage())
+            );
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                Map.of("message", "Unable to resend OTP: " + e.getMessage())
             );
         }
     }

@@ -63,7 +63,7 @@ export default function Register() {
     try {
       setLoading(true);
 
-      await api.post("/auth/register", {
+      const response = await api.post("/auth/register", {
         name: formData.name.trim(),
         email: formData.email.trim(),
         password: formData.password,
@@ -72,8 +72,13 @@ export default function Register() {
       setOtpStep(true);
       setCountdown(60);
       setSuccess(
-        `A verification OTP has been sent to ${formData.email.trim()}.`
+        response.data?.message ||
+          `A verification OTP has been sent to ${formData.email.trim()}.`
       );
+
+      if (response.data?.otp) {
+        setOtp(response.data.otp);
+      }
     } catch (error) {
       setError(
         error.response?.data?.message ||
@@ -128,13 +133,19 @@ export default function Register() {
     try {
       setResending(true);
 
-      await api.post("/auth/resend-otp", {
+      const response = await api.post("/auth/resend-otp", {
         email: formData.email.trim(),
       });
 
       setCountdown(60);
-      setOtp("");
-      setSuccess("A new OTP has been sent to your email.");
+      if (response.data?.otp) {
+        setOtp(response.data.otp);
+      } else {
+        setOtp("");
+      }
+      setSuccess(
+        response.data?.message || "A new OTP has been sent to your email."
+      );
     } catch (error) {
       setError(
         error.response?.data?.message ||

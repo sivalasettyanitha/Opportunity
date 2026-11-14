@@ -40,7 +40,7 @@ public class EmailVerificationService {
 
     // START REGISTRATION AND SEND OTP
     @Transactional
-    public void startVerification(
+    public String startVerification(
             String name,
             String email,
             String password) {
@@ -78,9 +78,12 @@ public class EmailVerificationService {
         verification.setResendCount(0);
         verification.setResendWindowStartedAt(now);
 
-        emailService.sendOtpEmail(email, otp);
-
+        // Save pending verification record first so the user can verify regardless of email transport
         verificationRepository.save(verification);
+
+        boolean emailSent = emailService.sendOtpEmail(email, otp);
+
+        return emailSent ? null : otp;
     }
 
     // VERIFY OTP AND CREATE USER ACCOUNT
@@ -139,7 +142,7 @@ public class EmailVerificationService {
 
     // RESEND OTP WITH RATE LIMITING
     @Transactional
-    public void resendOtp(String email) {
+    public String resendOtp(String email) {
 
         email = email.trim().toLowerCase();
 
@@ -184,8 +187,6 @@ public class EmailVerificationService {
 
         String otp = generateOtp();
 
-        emailService.sendOtpEmail(email, otp);
-
         verification.setOtpHash(passwordEncoder.encode(otp));
         verification.setExpiresAt(now.plusMinutes(OTP_EXPIRY_MINUTES));
         verification.setLastSentAt(now);
@@ -194,6 +195,10 @@ public class EmailVerificationService {
                 verification.getResendCount() + 1);
 
         verificationRepository.save(verification);
+
+        boolean emailSent = emailService.sendOtpEmail(email, otp);
+
+        return emailSent ? null : otp;
     }
 
     // GENERATE SECURE SIX-DIGIT OTP
