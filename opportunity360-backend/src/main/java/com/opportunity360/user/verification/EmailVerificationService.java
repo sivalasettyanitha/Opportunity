@@ -52,21 +52,12 @@ public class EmailVerificationService {
                     "This email is already registered. Please login.");
         }
 
-        // Remove an expired pending registration.
-        verificationRepository.findByEmail(email).ifPresent(existing -> {
-
-            if (LocalDateTime.now().isAfter(existing.getExpiresAt())) {
-                verificationRepository.delete(existing);
-            } else {
-                throw new IllegalArgumentException(
-                        "An OTP has already been requested. Please use resend OTP.");
-            }
-        });
-
         String otp = generateOtp();
         LocalDateTime now = LocalDateTime.now();
 
-        EmailVerification verification = new EmailVerification();
+        // If a pending registration already exists for this email, reuse and update it
+        EmailVerification verification = verificationRepository.findByEmail(email)
+                .orElseGet(EmailVerification::new);
 
         verification.setName(name.trim());
         verification.setEmail(email);
@@ -77,6 +68,9 @@ public class EmailVerificationService {
         verification.setAttempts(0);
         verification.setResendCount(0);
         verification.setResendWindowStartedAt(now);
+        if (verification.getCreatedAt() == null) {
+            verification.setCreatedAt(now);
+        }
 
         // Save pending verification record first so the user can verify regardless of email transport
         verificationRepository.save(verification);
